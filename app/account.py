@@ -1,4 +1,17 @@
-import telethon
+from pathlib import Path
 
-def add_account():
-    pass
+from telethon import TelegramClient
+
+class TelethonManager:
+    def __init__(self, api_id: int, api_hash: str, sessions_dir: str | Path = "sessions"):
+        self.api_id = api_id
+        self.api_hash = api_hash
+        self.sessions_dir = Path(sessions_dir)
+        self.sessions_dir.mkdir(parents=True, exist_ok=True)
+
+    def session_path(self, account_id: str) -> str:
+        return str(self.sessions_dir / account_id)
+
+    def client(self, account_id: str) -> TelegramClient:
+        return TelegramClient(self.session_path(account_id), self.api_id, self.api_hash)
+    

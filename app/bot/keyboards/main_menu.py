@@ -12,7 +12,7 @@ def main_menu():
             [
                 InlineKeyboardButton(
                     text="➕ Добавить акаунт",
-                    callback_data="add_account"
+                    callback_data="account_add"
                 )
             ]
         ]

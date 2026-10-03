@@ -48,4 +48,14 @@ class JsonStorage:
     async def write(self, data: dict[str, Any]) -> None:
         async with self._lock:
             self._write_sync(self.file_path, data)
-            
+        
+    async def add_account(self, account: dict[str, Any]) -> None:
+        async with self._lock:
+
+            data = self._read_sync(self.file_path)
+
+            data.setdefault("accounts", [])
+
+            data["accounts"].append(account)
+
+            self._write_sync(self.file_path, data)

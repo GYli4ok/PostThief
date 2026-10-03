@@ -3,6 +3,7 @@ import logging
 
 from aiogram import Bot, Dispatcher
 
+from app.account import TelethonManager
 from app.utils.storage import JsonStorage
 from app.bot.handlers import setup
 from env import load_config
@@ -17,8 +18,10 @@ async def main():
     bot = Bot(config.shop_bot_token)
     dp = Dispatcher()
     
+    tg = TelethonManager(config.telethon_api_id, config.telethon_api_hash)
+    
     await bot.delete_webhook(drop_pending_updates=True)
-    dp.include_router(setup(storage))
+    dp.include_router(setup(storage, tg))
     await dp.start_polling(bot) 
     
 if __name__ == "__main__":

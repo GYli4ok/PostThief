@@ -1,13 +1,14 @@
 from aiogram import Router
 
+from app.account import TelethonManager
 from app.bot.handlers import MainHandlers, AccountHandlers
 from app.utils.storage import JsonStorage
 
 
-def setup(storage: JsonStorage) -> Router:
+def setup(storage: JsonStorage, tg: TelethonManager) -> Router:
     router = Router()
 
     MainHandlers(storage).register(router)
-    AccountHandlers(storage).register(router)
+    AccountHandlers(storage, tg).register(router)
     
     return router
