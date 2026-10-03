@@ -1,0 +1,18 @@
+config.json
+
+.venv/
+venv/
+env/
+
+.vscode/
+
+__pycache__/
+*.pyc
+*.pyo
+
+.env
+.env.*
+
+# Временные файлы
+*.log
+*.tmp
