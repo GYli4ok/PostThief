@@ -18,9 +18,7 @@ class AccountHandlers:
 
     def register(self, router: Router) -> None:
             router.callback_query.register(self.accounts, F.data == "accounts")
-            print("AccountHandlers registered")
             router.callback_query.register(self.account_add, F.data == "account_add")
-            print("AccountHandlers registered")
             router.message.register(self.account_phone, AddAccountStates.phone)
             router.message.register(self.account_code, AddAccountStates.code)
             router.message.register(self.account_password, AddAccountStates.password)
@@ -46,8 +44,7 @@ class AccountHandlers:
         await state.set_state(AddAccountStates.phone)
         await callback.message.edit_text(
             "➕ <b>Добавление аккаунта</b>\n\n"
-            "Отправьте номер телефона в международном формате:\n"
-            "<code>+380XXXXXXXXX</code>\n\n"
+            "Отправьте номер телефона:\n"
             "Код Telegram и пароль 2FA не сохраняются.",
             parse_mode="HTML",
         )
@@ -57,7 +54,7 @@ class AccountHandlers:
 
         phone = self.clean_phone(message.text or "")
         if not phone.startswith("+") or len(phone) < 8:
-            await message.answer("❌ Неверный номер. Пример: <code>+380XXXXXXXXX</code>", parse_mode="HTML")
+            await message.answer("❌ Неверный номер.", parse_mode="HTML")
             return
 
         account_id = uuid.uuid4().hex[:12]
@@ -90,7 +87,7 @@ class AccountHandlers:
             "telegram_id": me.id,
             "phone": phone,
             "display_name": display_name,
-            "username": me.username or "",
+            "path_session": self.tg.sessions_path(account_id),
             "source_channel": [],
             "target_channel": []
         }
@@ -129,6 +126,7 @@ class AccountHandlers:
             return
         except Exception as e:
             await client.disconnect()
+            await self.tg.delete_session(account_id)
             await message.answer(f"❌ Ошибка входа:\n<code>{e}</code>", parse_mode="HTML")
             return
 
@@ -139,7 +137,6 @@ class AccountHandlers:
         await message.answer(f"✅ Аккаунт подключён:\n<b>{display_name}</b>", parse_mode="HTML")
 
     async def account_password(self, message: Message, state: FSMContext):
-
         data = await state.get_data()
         account_id = data["account_id"]
         phone = data["phone"]
@@ -151,6 +148,7 @@ class AccountHandlers:
             me = await client.get_me()
         except Exception as e:
             await client.disconnect()
+            await self.tg.delete_session(account_id)
             await message.answer(
                 f"❌ Не удалось пройти 2FA.\n<code>{e}</code>\n\nПроверьте пароль и попробуйте ещё раз.",
                 parse_mode="HTML",
@@ -162,3 +160,4 @@ class AccountHandlers:
         await state.clear()
         await message.answer(f"✅ Аккаунт подключён:\n<b>{display_name}</b>", parse_mode="HTML")
         
+

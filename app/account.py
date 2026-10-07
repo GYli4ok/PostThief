@@ -15,3 +15,9 @@ class TelethonManager:
     def client(self, account_id: str) -> TelegramClient:
         return TelegramClient(self.session_path(account_id), self.api_id, self.api_hash)
     
+    async def delete_session(self, account_id: str) -> None:
+        for path in self.sessions_dir.glob(f"{account_id}.session*"):
+            try:
+                path.unlink()
+            except FileNotFoundError:
+                pass
