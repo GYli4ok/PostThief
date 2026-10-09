@@ -10,7 +10,7 @@ class JsonStorage:
     
     DEFAULT_DATA = {
         "settings": {},
-        "accounts": []
+        "accounts": {}
     }
     
     def __init__(self, file_path: str | Path = "config.json"):
@@ -42,20 +42,21 @@ class JsonStorage:
 
     async def read(self) -> dict[str, Any]:
         async with self._lock:
-            return deepcopy(self._read_sync(self.file_path))
+            return self._read_sync(self.file_path)
 
 
     async def write(self, data: dict[str, Any]) -> None:
         async with self._lock:
             self._write_sync(self.file_path, data)
         
-    async def add_account(self, account: dict[str, Any]) -> None:
+    async def add_account(self, accounts: dict[str, Any]) -> None:
         async with self._lock:
-
             data = self._read_sync(self.file_path)
-
-            data.setdefault("accounts", [])
-
-            data["accounts"].append(account)
-
+            data.setdefault("accounts", {})
+            data["accounts"][accounts["account_id"]] = accounts
             self._write_sync(self.file_path, data)
+            
+    async def get_accounts(self) -> dict[str, Any]:
+        async with self._lock:
+            data = self._read_sync(self.file_path)
+            return data.get("accounts", {})

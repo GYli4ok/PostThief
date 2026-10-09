@@ -17,7 +17,6 @@ class AccountHandlers:
         self.tg = tg
 
     def register(self, router: Router) -> None:
-            router.callback_query.register(self.accounts, F.data == "accounts")
             router.callback_query.register(self.account_add, F.data == "account_add")
             router.message.register(self.account_phone, AddAccountStates.phone)
             router.message.register(self.account_code, AddAccountStates.code)
@@ -25,18 +24,6 @@ class AccountHandlers:
     
     def clean_phone(self, value: str) -> str:
         return re.sub(r"[^\d+]", "", value.strip())
-
-    async def accounts(self, message: Message) -> None:
-        
-        data = await self.storage.read()
-        accounts = data["accounts"]
-        
-        if not accounts:
-            await message.answer("У вас нет добавленных аккаунтов.")
-            return
-
-        account_list = "\n".join([f"{i + 1}. {account}" for i, account in enumerate(accounts)])
-        await message.answer(f"Ваши аккаунты:\n{account_list}")
         
     async def account_add(self, callback: CallbackQuery, state: FSMContext):
         
@@ -87,11 +74,11 @@ class AccountHandlers:
             "telegram_id": me.id,
             "phone": phone,
             "display_name": display_name,
-            "path_session": self.tg.sessions_path(account_id),
+            "path_session": str(self.tg.sessions_path(account_id)),
             "source_channel": [],
             "target_channel": []
         }
-        await self.storage.add_account(account)
+        await self.storage.add_account(account_id, account)
         
         return display_name
 

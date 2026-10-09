@@ -6,7 +6,7 @@ def accounts_list_menu(accounts: dict) -> InlineKeyboardMarkup:
         label = item.get("display_name") or item.get("phone") or account_id
         rows.append([InlineKeyboardButton(text=f"👤 {label}", callback_data=f"account:{account_id}")])
     rows.append([InlineKeyboardButton(text="➕ Добавить аккаунт", callback_data="account_add")])
-    rows.append([InlineKeyboardButton(text="⬅️ Главное меню", callback_data="main")])
+    rows.append([InlineKeyboardButton(text="⬅️ Главное меню", callback_data="menu")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 def account_menu(account_id: str) -> InlineKeyboardMarkup:
