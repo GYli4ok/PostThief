@@ -6,13 +6,13 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 from telethon.errors import PhoneCodeExpiredError, PhoneCodeInvalidError, SessionPasswordNeededError
 
-from app.session import TelethonManager
+from app.session import SessionManager
 from app.utils.states import AddAccountStates
 from app.utils.storage import JsonStorage
 
 
 class AccountHandlers:
-    def __init__(self, storage: JsonStorage, tg: TelethonManager) -> None:
+    def __init__(self, storage: JsonStorage, tg: SessionManager) -> None:
         self.storage = storage
         self.tg = tg
 

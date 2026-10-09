@@ -2,7 +2,7 @@ from pathlib import Path
 
 from telethon import TelegramClient
 
-class TelethonManager:
+class SessionManager:
     def __init__(self, api_id: int, api_hash: str, sessions_dir: str | Path = "sessions"):
         self.api_id = api_id
         self.api_hash = api_hash
