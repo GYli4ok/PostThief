@@ -3,7 +3,7 @@ import logging
 
 from aiogram import Bot, Dispatcher
 
-from app.account import TelethonManager
+from app.session import TelethonManager
 from app.utils.storage import JsonStorage
 from app.bot.handlers import setup
 from env import load_config

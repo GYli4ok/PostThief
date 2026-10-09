@@ -6,7 +6,7 @@ from aiogram.types import CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 from telethon.errors import PhoneCodeExpiredError, PhoneCodeInvalidError, SessionPasswordNeededError
 
-from app.account import TelethonManager
+from app.session import TelethonManager
 from app.utils.states import AddAccountStates
 from app.utils.storage import JsonStorage
 

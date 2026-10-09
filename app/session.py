@@ -12,7 +12,7 @@ class TelethonManager:
     def session_path(self, account_id: str) -> str:
         return str(self.sessions_dir / account_id)
 
-    def client(self, account_id: str) -> TelegramClient:
+    async def client(self, account_id: str) -> TelegramClient:
         return TelegramClient(self.session_path(account_id), self.api_id, self.api_hash)
     
     async def delete_session(self, account_id: str) -> None:

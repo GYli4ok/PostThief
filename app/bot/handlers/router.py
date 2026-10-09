@@ -1,6 +1,6 @@
 from aiogram import Router
 
-from app.account import TelethonManager
+from app.session import TelethonManager
 from app.bot.handlers import MainHandlers, AccountHandlers
 from app.utils.storage import JsonStorage
 

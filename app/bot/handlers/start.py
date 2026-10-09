@@ -20,4 +20,3 @@ class MainHandlers:
             reply_markup=main_menu(),
             parse_mode="HTML",
         )
-        
