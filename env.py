@@ -25,15 +25,13 @@ class Config:
 def load_config() -> Config:
     tg_bot_token = os.getenv("TELEGRAM_BOT_TOKEN", "").strip()
     telethon_api_id = int(os.getenv("TELETHON_API_ID", 0))
-    telethon_api_hash = os.getenv("TELETHON_API_HASH", "")
-    admin_ids = _parse_admin_ids(os.getenv("ADMIN_IDS", ""))
+    telethon_api_hash = os.getenv("TELETHON_API_HASH", "").strip()
+    admin_ids = _parse_admin_ids(os.getenv("ADMIN_IDS", "").strip())
 
     if not tg_bot_token:
         raise RuntimeError("TELEGRAM_BOT_TOKEN не указан в .env")
-
-    if not telethon_api_id:
+    if not telethon_api_id or telethon_api_id == 0:
         raise RuntimeError("TELETHON_API_ID не указан в .env")
-
     if not telethon_api_hash:
         raise RuntimeError("TELETHON_API_HASH не указан в .env")
 

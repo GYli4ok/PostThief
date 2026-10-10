@@ -56,7 +56,14 @@ class JsonStorage:
             data["accounts"][accounts["account_id"]] = accounts
             self._write_sync(self.file_path, data)
             
+## Get all accounts
     async def get_accounts(self) -> dict[str, Any]:
         async with self._lock:
             data = self._read_sync(self.file_path)
             return data.get("accounts", {})
+        
+## Get a single account by account_id
+    async def get_account(self, account_id: str) -> dict[str, Any] | None:
+        async with self._lock:
+            data = self._read_sync(self.file_path)
+            return data.get("accounts", {}).get(account_id)

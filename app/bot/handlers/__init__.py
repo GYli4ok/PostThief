@@ -1,11 +1,12 @@
 from .start import MainHandlers
-from .account import AccountHandlers
+from .account import LogInAccountHandlers, AccountHandlers
 from .accounts_list import AccountsListHandler
 from .router import setup
 
 __all__ = [
     "MainHandlers",
-    "AccountHandlers",
+    "LogInAccountHandlers",
     "AccountsListHandler",
+    "AccountHandlers",
     "setup"
 ]

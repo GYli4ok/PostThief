@@ -1,5 +1,5 @@
 from aiogram import F, Router
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery
 
 from app.bot.keyboards.accounts_menu import accounts_list_menu
 from app.utils.storage import JsonStorage
