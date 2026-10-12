@@ -17,3 +17,26 @@ def account_menu(account_id: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="⏱ Настройка", callback_data=f"auto_settings:{account_id}")],
         [InlineKeyboardButton(text="⬅️ Аккаунты", callback_data="accounts")],
     ])
+def chat_list_menu(chats: list[dict], account_id: str, selected_chats: list[int], page: int, per_page: int = 8) -> InlineKeyboardMarkup:
+    start = page * per_page
+    end = start + per_page
+    rows = []
+    selected_set = set(selected_chats)
+
+    for chat in chats[start:end]:
+        checked = "✅" if chat["id"] in selected_set else "▫️"
+        rows.append([InlineKeyboardButton(
+            text=f"{checked} 📢 {chat['title'][:32]}",
+            callback_data=f"chat_toggle:{account_id}:{chat['id']}:{page}"
+        )])
+
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton(text="⬅️", callback_data=f"chat_page:{account_id}:{page-1}"))
+    if end < len(chats):
+        nav.append(InlineKeyboardButton(text="➡️", callback_data=f"chat_page:{account_id}:{page+1}"))
+    if nav:
+        rows.append(nav)
+
+    rows.append([InlineKeyboardButton(text="⬅️ Аккаунт", callback_data=f"account:{account_id}")])
+    return InlineKeyboardMarkup(inline_keyboard=rows)

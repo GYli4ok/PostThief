@@ -10,7 +10,7 @@ def setup(storage: JsonStorage, tg: SessionManager) -> Router:
 
     MainHandlers(storage).register(router)
     LogInAccountHandlers(storage, tg).register(router)
-    AccountHandlers(storage).register(router)
+    AccountHandlers(storage, tg).register(router)
     AccountsListHandler(storage).register(router)
     
     return router

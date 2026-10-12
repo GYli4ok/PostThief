@@ -1,6 +1,8 @@
+from typing import Any
 from pathlib import Path
 
 from telethon import TelegramClient
+from telethon.tl.types import Channel
 
 class SessionManager:
     def __init__(self, api_id: int, api_hash: str, sessions_dir: str | Path = "sessions"):
@@ -23,3 +25,26 @@ class SessionManager:
             except FileNotFoundError:
                 print(f"Файл сессии {path} не найден для удаления.")
                 pass
+
+    async def list_chats(self, account_id: str) -> list[dict[str, Any]]:
+        client = self.client(account_id)
+        await client.connect()
+        try:
+            if not await client.is_user_authorized():
+                raise RuntimeError("Аккаунт не авторизован")
+
+            result = []
+            async for dialog in client.iter_dialogs():
+                entity = dialog.entity
+                if not isinstance(entity, Channel):
+                    continue
+                if getattr(entity, "megagroup", False):
+                    continue
+                result.append({
+                    "id": int(dialog.id),
+                    "title": dialog.name or str(dialog.id),
+                    "username": getattr(entity, "username", None),
+                })
+            return result
+        finally:
+            await client.disconnect()

@@ -7,26 +7,28 @@ import qrcode
 from aiogram import F, Router
 from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
-from telethon.errors import PhoneCodeExpiredError, PhoneCodeInvalidError, SessionPasswordNeededError
+from telethon.errors import PhoneCodeExpiredError, PhoneCodeInvalidError, SessionPasswordNeededError\
 
-from app.bot.keyboards.accounts_menu import account_menu
+from app.bot.keyboards.accounts_menu import account_menu, chat_list_menu
 from app.session import SessionManager
 from app.utils.states import AddAccountStates
 from app.utils.storage import JsonStorage
 
 
 class AccountHandlers:
-    def __init__(self, storage: JsonStorage) -> None:
+    def __init__(self, storage: JsonStorage, tg: SessionManager) -> None:
         self.storage = storage
+        self.tg = tg
 
     def register(self, router: Router) -> None:
             router.callback_query.register(self.account, F.data.startswith("account:"))
+            router.callback_query.register(self.account_chats, F.data.startswith("account_chats:"))
+            router.callback_query.register(self.chat_page, F.data.startswith("chat_page:"))
             
     async def account(self, callback: CallbackQuery, state: FSMContext):
         account_id = callback.data.split(":", 1)[1]
         account = await self.storage.get_account(account_id)
         if not account:
-            await callback.answer()
             await callback.answer("❌ Аккаунт не найден.", show_alert=True)
             return
 
@@ -40,8 +42,35 @@ class AccountHandlers:
             reply_markup=account_menu(account_id),
             parse_mode="HTML",
         )
-            
+    async def show_chat_page(self, callback: CallbackQuery, account_id: str, page: int):
+        item = await self.storage.get_account(account_id)
+        if not item:
+            await callback.answer("Аккаунт не найден", show_alert=True)
+            return
+        try:
+            chats = await self.tg.list_chats(account_id)
+        except Exception as e:
+            await callback.answer(f"Ошибка: {e}", show_alert=True)
+            return
 
+        selected = [int(x) for x in item.get("selected_chats", [])]
+        await callback.message.edit_text(
+            "📋 <b>КАНАЛЫ И ГРУППЫ</b>\n\n"
+            f"Всего доступно: <b>{len(chats)}</b>\n"
+            "Нажимайте на чат, чтобы включить/выключить его.",
+            reply_markup=chat_list_menu(chats, account_id, selected, page),
+            parse_mode="HTML",
+        )
+        await callback.answer()
+
+    async def account_chats(self, callback: CallbackQuery):
+        account_id = callback.data.split(":", 1)[1]
+        await self.show_chat_page(callback, account_id, 0)
+        
+    async def chat_page(self, callback: CallbackQuery):
+        _, account_id, page = callback.data.split(":", 2)
+        await self.show_chat_page(callback, account_id, int(page))
+    
 class LogInAccountHandlers:
     def __init__(self, storage: JsonStorage, tg: SessionManager) -> None:
         self.storage = storage
