@@ -67,3 +67,11 @@ class JsonStorage:
         async with self._lock:
             data = self._read_sync(self.file_path)
             return data.get("accounts", {}).get(account_id)
+        
+    async def update_account(self, account_id: str, updates: dict[str, Any]) -> None:
+        async with self._lock:
+            print(f"Updating account {account_id} with {updates}")
+            data = self._read_sync(self.file_path)
+            if "accounts" in data and account_id in data["accounts"]:
+                data["accounts"][account_id].update(updates)
+                self._write_sync(self.file_path, data)

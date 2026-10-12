@@ -9,7 +9,7 @@ from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 from telethon.errors import PhoneCodeExpiredError, PhoneCodeInvalidError, SessionPasswordNeededError\
 
-from app.bot.keyboards.accounts_menu import account_menu, chat_list_menu
+from app.bot.keyboards.accounts_menu import account_menu, channel_selected_type_menu, chat_list_menu
 from app.session import SessionManager
 from app.utils.states import AddAccountStates
 from app.utils.storage import JsonStorage
@@ -24,6 +24,9 @@ class AccountHandlers:
             router.callback_query.register(self.account, F.data.startswith("account:"))
             router.callback_query.register(self.account_chats, F.data.startswith("account_chats:"))
             router.callback_query.register(self.chat_page, F.data.startswith("chat_page:"))
+            router.callback_query.register(self.chat_toggle, F.data.startswith("chat_toggle:"))
+            router.callback_query.register(self.target_chat, F.data.startswith("target_chat:"))
+            router.callback_query.register(self.source_chat, F.data.startswith("source_chat:"))
             
     async def account(self, callback: CallbackQuery, state: FSMContext):
         account_id = callback.data.split(":", 1)[1]
@@ -71,6 +74,67 @@ class AccountHandlers:
         _, account_id, page = callback.data.split(":", 2)
         await self.show_chat_page(callback, account_id, int(page))
     
+    async def chat_toggle(self, callback: CallbackQuery):
+        _, account_id, chat_id, page = callback.data.split(":", 3)
+        item = await self.storage.get_account(account_id)
+        if not item:
+            await callback.answer("Аккаунт не найден", show_alert=True)
+            return
+
+        chats = await self.tg.list_chats(account_id)
+        chat = next(
+            (chat for chat in chats if int(chat["id"]) == int(chat_id)),
+            None,
+        )
+        if not chat:
+            await callback.answer("Канал не найден", show_alert=True)
+            return
+
+        chat_title = chat["title"]
+        await callback.message.edit_text(
+                f"Настрока канала:\n\n"
+                f"📢 <b>{chat_title}</b>\n\n"
+                "Выберите каким будет этот канал:",
+                reply_markup=channel_selected_type_menu(account_id, chat_id, int(page)),
+                parse_mode="HTML",
+            )
+        
+### Обрабока выбора канала как цель в который будет отправлять пост
+    async def target_chat(self, callback: CallbackQuery):
+        _, account_id, chat_id = callback.data.split(":", 2)
+        account = await self.storage.get_account(account_id)
+        if not account:
+            await callback.answer("Аккаунт не найден", show_alert=True)
+            return
+        selected = [int(x) for x in account.get("target_channels", [])]
+        if chat_id in selected:
+            selected.remove(chat_id)
+            message = "Канал удалён из получателей"
+        else:
+            selected.append(chat_id)
+            message = "Канал добавлен в получатели"
+        await self.storage.update_account(account_id, {"target_channels": selected})
+        print(message)
+        await callback.answer(message, show_alert=True)
+    
+### Обработка кнопки "Источник" для канала
+    async def source_chat(self, callback: CallbackQuery):
+        _, account_id, chat_id = callback.data.split(":", 2)
+        account = await self.storage.get_account(account_id)
+        if not account:
+            await callback.answer("Аккаунт не найден", show_alert=True)
+            return
+        selected = [int(x) for x in account.get("source_channels", [])]
+        if chat_id in selected:
+            selected.remove(chat_id)
+            message = "Канал удалён из источников"
+        else:
+            selected.append(chat_id)
+            message = "Канал добавлен в источники"
+        await self.storage.update_account(account_id, {"source_channels": selected})
+        print(message)
+        await callback.answer(message, show_alert=True)
+        
 class LogInAccountHandlers:
     def __init__(self, storage: JsonStorage, tg: SessionManager) -> None:
         self.storage = storage
@@ -96,11 +160,12 @@ class LogInAccountHandlers:
         account = {
             "account_id": account_id,
             "telegram_id": me.id,
+            "auto_forward": false,
             "phone": me.phone or "Не указан",
             "display_name": display_name,
             "path_session": str(self.tg.session_path(account_id)),
-            "source_channel": [],
-            "target_channel": []
+            "source_channels": [],
+            "target_channels": []
         }
         await self.storage.add_account(account)
         

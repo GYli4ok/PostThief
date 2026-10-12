@@ -14,7 +14,7 @@ def account_menu(account_id: str) -> InlineKeyboardMarkup:
         [InlineKeyboardButton(text="📋 Каналы и группы", callback_data=f"account_chats:{account_id}")],
         [InlineKeyboardButton(text="➕ Добавить чат", callback_data=f"account_add_chat:{account_id}")],
         [InlineKeyboardButton(text="🗑 Удалить аккаунт", callback_data=f"account_delete:{account_id}")],
-        [InlineKeyboardButton(text="⏱ Настройка", callback_data=f"auto_settings:{account_id}")],
+        [InlineKeyboardButton(text="⏱ Настройка", callback_data=f"auto_forward:{account_id}")],
         [InlineKeyboardButton(text="⬅️ Аккаунты", callback_data="accounts")],
     ])
 def chat_list_menu(chats: list[dict], account_id: str, selected_chats: list[int], page: int, per_page: int = 8) -> InlineKeyboardMarkup:
@@ -40,3 +40,36 @@ def chat_list_menu(chats: list[dict], account_id: str, selected_chats: list[int]
 
     rows.append([InlineKeyboardButton(text="⬅️ Аккаунт", callback_data=f"account:{account_id}")])
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+def channel_selected_type_menu(account_id: str, chatid: int, page: int) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="📥 Канал-источник", callback_data=f"source_chat:{account_id}:{chatid}")],
+        [InlineKeyboardButton(text="📤 Канал-получатель", callback_data=f"target_chat:{account_id}:{chatid}")],
+        [InlineKeyboardButton(text="⬅️ Назад", callback_data=f"chat_page:{account_id}:{page}")],
+    ])
+def auto_forward_menu(
+    account_id: str,
+    enabled: bool,
+) -> InlineKeyboardMarkup:
+    text = (
+        "⏸ Выключить автокопирование"
+        if enabled
+        else "▶️ Включить автокопирование"
+    )
+
+    return InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text=text,
+                    callback_data=f"auto_forward:{account_id}",
+                )
+            ],
+            [
+                InlineKeyboardButton(
+                    text="⬅️ Назад",
+                    callback_data=f"account:{account_id}",
+                )
+            ],
+        ]
+    )
