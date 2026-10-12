@@ -160,7 +160,7 @@ class LogInAccountHandlers:
         account = {
             "account_id": account_id,
             "telegram_id": me.id,
-            "auto_forward": false,
+            "auto_forward": False,
             "phone": me.phone or "Не указан",
             "display_name": display_name,
             "path_session": str(self.tg.session_path(account_id)),
