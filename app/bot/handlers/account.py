@@ -9,8 +9,9 @@ from aiogram.types import BufferedInputFile, CallbackQuery, Message
 from aiogram.fsm.context import FSMContext
 from telethon.errors import PhoneCodeExpiredError, PhoneCodeInvalidError, SessionPasswordNeededError\
 
-from app.bot.keyboards.accounts_menu import account_menu, channel_selected_type_menu, chat_list_menu
+from app.bot.keyboards.accounts_menu import account_menu, accounts_list_menu, chat_list_menu
 from app.session import SessionManager
+from app.utils.chat_types import ChatType, get_chat_type
 from app.utils.states import AddAccountStates
 from app.utils.storage import JsonStorage
 
@@ -25,8 +26,6 @@ class AccountHandlers:
             router.callback_query.register(self.account_chats, F.data.startswith("account_chats:"))
             router.callback_query.register(self.chat_page, F.data.startswith("chat_page:"))
             router.callback_query.register(self.chat_toggle, F.data.startswith("chat_toggle:"))
-            router.callback_query.register(self.target_chat, F.data.startswith("target_chat:"))
-            router.callback_query.register(self.source_chat, F.data.startswith("source_chat:"))
             
     async def account(self, callback: CallbackQuery, state: FSMContext):
         account_id = callback.data.split(":", 1)[1]
@@ -38,101 +37,108 @@ class AccountHandlers:
         await state.clear()
         await state.update_data(account_id=account_id)
         await callback.message.edit_text(
-            f"👤 Аккаунт: <b>{account['display_name']}</b>\n\n"
+            f"👤 Аккаунт: <b>{account['display_name']}</b>\n"
             f"Телеграм ID: <code>{account['telegram_id']}</code>\n"
-            f"Номер телефона: <code>{account['phone']}</code>\n\n"
-            "Выберите действие:",
+            "━━━━━━━━━━━━━━━━━━\n"
+            f"📥 <b>Канал-источник</b>\n"
+            "└ Откуда копируются сообщения\n"
+            f"📤 <b>Канал-получатель</b>\n"
+            "└ Куда отправляются сообщения\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "⚙️ <b>УПРАВЛЕНИЕ АККАУНТОМ</b>\n"
+            "Выберите действие с помощью кнопок ниже 👇",
             reply_markup=account_menu(account_id),
             parse_mode="HTML",
         )
-    async def show_chat_page(self, callback: CallbackQuery, account_id: str, page: int):
+    async def show_chat_page(self, callback: CallbackQuery, account_id: str, channel_type: ChatType, page: int):
         item = await self.storage.get_account(account_id)
         if not item:
             await callback.answer("Аккаунт не найден", show_alert=True)
             return
         try:
-            chats = await self.tg.list_chats(account_id)
+            target_channels, source_channels = await self.tg.get_list_channels(account_id)
+            target_selected_channels = item.get("target_channels", [])
+            source_selected_channels = item.get("source_channels", [])
         except Exception as e:
             await callback.answer(f"Ошибка: {e}", show_alert=True)
             return
-
-        selected = [int(x) for x in item.get("selected_chats", [])]
+        
+        channels = source_channels if channel_type == ChatType.SOURCE else target_channels
+        selected = source_selected_channels if channel_type == ChatType.SOURCE else target_selected_channels
+        
         await callback.message.edit_text(
-            "📋 <b>КАНАЛЫ И ГРУППЫ</b>\n\n"
-            f"Всего доступно: <b>{len(chats)}</b>\n"
-            "Нажимайте на чат, чтобы включить/выключить его.",
-            reply_markup=chat_list_menu(chats, account_id, selected, page),
+            "📋 <b>УПРАВЛЕНИЕ КАНАЛАМИ</b>\n\n"
+            "📊 <b>СТАТИСТИКА</b>\n"
+            f"├ 📚 Всего доступно: <b>{len(target_channels) + len(source_channels)}</b>\n"
+            f"├ 📥 Источники: <b>{len(source_channels)}</b>\n"
+            f"└ 📤 Получатели: <b>{len(target_channels)}</b>\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "✅ — Канал выбран для использования\n"
+            "━━━━━━━━━━━━━━━━━━\n"
+            "👇<b>Нажимайте на канал</b>, чтобы добавить его в список или убрать из него.",
+            reply_markup=chat_list_menu(channels, account_id, selected, channel_type, page),
             parse_mode="HTML",
         )
         await callback.answer()
 
     async def account_chats(self, callback: CallbackQuery):
-        account_id = callback.data.split(":", 1)[1]
-        await self.show_chat_page(callback, account_id, 0)
+        _, account_id, raw_channel_type = callback.data.split(":", 2)
+        try:
+            channel_type = get_chat_type(raw_channel_type)
+        except ValueError:
+            await callback.answer(
+                "Среди списка есть неизвестный тип чата",
+                show_alert=True
+            )
+            return
+        await self.show_chat_page(callback, account_id, channel_type, 0)
         
     async def chat_page(self, callback: CallbackQuery):
-        _, account_id, page = callback.data.split(":", 2)
-        await self.show_chat_page(callback, account_id, int(page))
+        _, account_id, raw_channel_type, page = callback.data.split(":", 3)
+        try:
+            channel_type = get_chat_type(raw_channel_type)
+        except ValueError:
+            await callback.answer(
+                "Среди списка есть неизвестный тип чата",
+                show_alert=True
+            )
+            return
+        await self.show_chat_page(callback, account_id, channel_type, int(page))
     
     async def chat_toggle(self, callback: CallbackQuery):
-        _, account_id, chat_id, page = callback.data.split(":", 3)
+        _, account_id, raw_channel_type, channel_id = callback.data.split(":", 3)
         item = await self.storage.get_account(account_id)
         if not item:
             await callback.answer("Аккаунт не найден", show_alert=True)
             return
-
-        chats = await self.tg.list_chats(account_id)
-        chat = next(
-            (chat for chat in chats if int(chat["id"]) == int(chat_id)),
-            None,
-        )
-        if not chat:
-            await callback.answer("Канал не найден", show_alert=True)
-            return
-
-        chat_title = chat["title"]
-        await callback.message.edit_text(
-                f"Настрока канала:\n\n"
-                f"📢 <b>{chat_title}</b>\n\n"
-                "Выберите каким будет этот канал:",
-                reply_markup=channel_selected_type_menu(account_id, chat_id, int(page)),
-                parse_mode="HTML",
+        try:
+            channel_type = get_chat_type(raw_channel_type)
+        except ValueError:
+            await callback.answer(
+                "Среди списка есть неизвестный тип чата",
+                show_alert=True
             )
+            return
+        channel_name = ("📥 Каналы источники" if channel_type == ChatType.SOURCE else "📥 Каналы получатели")
+        key = ("source_channels" if channel_type == ChatType.SOURCE else "target_channels")
+        selected_channels = item.get(key, [])
+        channel_id = int(channel_id)
         
-### Обрабока выбора канала как цель в который будет отправлять пост
-    async def target_chat(self, callback: CallbackQuery):
-        _, account_id, chat_id = callback.data.split(":", 2)
-        account = await self.storage.get_account(account_id)
-        if not account:
-            await callback.answer("Аккаунт не найден", show_alert=True)
-            return
-        selected = [int(x) for x in account.get("target_channels", [])]
-        if chat_id in selected:
-            selected.remove(chat_id)
-            message = "Канал удалён из получателей"
+        if channel_id in selected_channels:
+            print(f"Channel remove list")
+            selected_channels.remove(channel_id)
+            message = f"🗑 Канал удалён из списка:\n {channel_name}"
         else:
-            selected.append(chat_id)
-            message = "Канал добавлен в получатели"
-        await self.storage.update_account(account_id, {"target_channels": selected})
-        print(message)
-        await callback.answer(message, show_alert=True)
-    
-### Обработка кнопки "Источник" для канала
-    async def source_chat(self, callback: CallbackQuery):
-        _, account_id, chat_id = callback.data.split(":", 2)
-        account = await self.storage.get_account(account_id)
-        if not account:
-            await callback.answer("Аккаунт не найден", show_alert=True)
-            return
-        selected = [int(x) for x in account.get("source_channels", [])]
-        if chat_id in selected:
-            selected.remove(chat_id)
-            message = "Канал удалён из источников"
-        else:
-            selected.append(chat_id)
-            message = "Канал добавлен в источники"
-        await self.storage.update_account(account_id, {"source_channels": selected})
-        print(message)
+            print(f"Channel added list")
+            selected_channels.append(channel_id)
+            message = f"✅ Канал добавлен в список:\n {channel_name}"
+        
+        await self.storage.update_account(account_id, {key: selected_channels})
+        await callback.message.edit_text(
+            "🔘 Список аккаунтов:",
+            reply_markup=accounts_list_menu(await self.storage.get_accounts()),
+            parse_mode="HTML",
+        )
         await callback.answer(message, show_alert=True)
         
 class LogInAccountHandlers:

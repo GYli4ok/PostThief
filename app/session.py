@@ -26,25 +26,34 @@ class SessionManager:
                 print(f"Файл сессии {path} не найден для удаления.")
                 pass
 
-    async def list_chats(self, account_id: str) -> list[dict[str, Any]]:
+    async def get_list_channels(self, account_id: str) -> list[dict[str, Any]]:
         client = self.client(account_id)
         await client.connect()
         try:
             if not await client.is_user_authorized():
                 raise RuntimeError("Аккаунт не авторизован")
 
-            result = []
+            target_dict_result = []
+            source_dict_result = []
             async for dialog in client.iter_dialogs():
                 entity = dialog.entity
                 if not isinstance(entity, Channel):
                     continue
                 if getattr(entity, "megagroup", False):
                     continue
-                result.append({
+                can_post = bool(getattr(entity, "creator", False) or (
+                    getattr(entity, "admin_rights", None) and entity.admin_rights.post_messages
+                ))
+                result = {
                     "id": int(dialog.id),
                     "title": dialog.name or str(dialog.id),
                     "username": getattr(entity, "username", None),
-                })
-            return result
+                }
+                if can_post:
+                    target_dict_result.append(result)
+                else:
+                    source_dict_result.append(result)
+                    
+            return target_dict_result, source_dict_result
         finally:
             await client.disconnect()
