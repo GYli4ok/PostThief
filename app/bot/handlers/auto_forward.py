@@ -12,7 +12,8 @@ class AutoForwardManager:
         self.handlers = {}
         
     def register(self, router: Router) -> None:
-        router.callback_query.register(self.toggle_auto_forward, F.data.startswith("auto_forward:"))
+        router.callback_query.register(self.auto_forward, F.data.startswith("auto_forward:"))
+        router.callback_query.register(self.toggle_auto_forward, F.data.startswith("toggle_auto_forward:"))
         
     async def start(self, account_id: str):
         if account_id in self.handlers:
@@ -67,6 +68,41 @@ class AutoForwardManager:
         
     async def toggle_auto_forward(self, callback: CallbackQuery):
         account_id = callback.data.split(":", 1)[1]
+        
+        account = await self.storage.get_account(account_id)
+        
+        if not account:
+            await callback.answer(
+                "Аккаунт не найден",
+                show_alert=True,
+            )
+            return
+        
+        enabled = account.get("auto_forward", False)
+        
+        try:
+            if enabled:
+                await self.stop(account_id)
+                enabled = False
+            else:
+                await self.start(account_id)
+                enabled = True
+        
+            await self.storage.update_account(account_id, {"auto_forward": enabled})
+        
+        except Exception as e:
+            await callback.answer(
+                f"Не удалось изменить настройку: {e}",
+                show_alert=True,
+            )
+            return
+        await callback.message.edit_text(
+            "Включить\Выключить автокопирование",
+            reply_markup=auto_forward_menu(account_id, enabled),
+        )
+        
+    async def auto_forward(self, callback: CallbackQuery):
+        account_id = callback.data.split(":", 1)[1]
 
         account = await self.storage.get_account(account_id)
 
@@ -76,27 +112,11 @@ class AutoForwardManager:
                 show_alert=True,
             )
             return
-
+        
         enabled = account.get("auto_forward", False)
-
-        try:
-            if enabled:
-                await self.stop(account_id)
-                enabled = False
-            else:
-                await self.start(account_id)
-                enabled = True
-
-            await self.storage.update_account(account_id, {"auto_forward": enabled})
-
-        except Exception as e:
-            await callback.answer(
-                f"Не удалось изменить настройку: {e}",
-                show_alert=True,
-            )
-            return
-
-        await callback.message.edit_reply_markup(
+        
+        await callback.message.edit_text(
+            "Включить\Выключить автокопирование",
             reply_markup=auto_forward_menu(account_id, enabled),
         )
 

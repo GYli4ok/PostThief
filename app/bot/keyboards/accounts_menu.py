@@ -54,7 +54,7 @@ def auto_forward_menu(account_id: str, enabled: bool) -> InlineKeyboardMarkup:
 
     return InlineKeyboardMarkup(
         inline_keyboard=[
-            [InlineKeyboardButton(text=text, callback_data=f"auto_forward:{account_id}"),],
+            [InlineKeyboardButton(text=text, callback_data=f"toggle_auto_forward:{account_id}"),],
             [InlineKeyboardButton(text="⬅️ Назад", callback_data=f"account:{account_id}")],
         ]
     )
