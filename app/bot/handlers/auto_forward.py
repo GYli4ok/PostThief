@@ -96,7 +96,14 @@ class AutoForwardManager:
                 show_alert=True,
             )
             return
-        await callback.message.edit_text(
+        
+        await callback.answer(
+            "Автокопирование включено"
+            if enabled
+            else "Автокопирование выключено"
+        )
+        
+        await callback.message.edit_reply_markup(
             "Включить\Выключить автокопирование",
             reply_markup=auto_forward_menu(account_id, enabled),
         )
@@ -118,10 +125,4 @@ class AutoForwardManager:
         await callback.message.edit_text(
             "Включить\Выключить автокопирование",
             reply_markup=auto_forward_menu(account_id, enabled),
-        )
-
-        await callback.answer(
-            "Автокопирование включено"
-            if enabled
-            else "Автокопирование выключено"
         )
