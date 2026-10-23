@@ -29,27 +29,33 @@ class AccountHandlers:
             
     async def account(self, callback: CallbackQuery, state: FSMContext):
         account_id = callback.data.split(":", 1)[1]
+        await state.clear()
+        await state.update_data(account_id=account_id)
+
+        await self.show_account(callback, account_id)
+        
+    async def show_account(self, callback: CallbackQuery, account_id):
         account = await self.storage.get_account(account_id)
+
         if not account:
             await callback.answer("❌ Аккаунт не найден.", show_alert=True)
             return
 
-        await state.clear()
-        await state.update_data(account_id=account_id)
         await callback.message.edit_text(
             f"👤 Аккаунт: <b>{account['display_name']}</b>\n"
             f"Телеграм ID: <code>{account['telegram_id']}</code>\n"
             "━━━━━━━━━━━━━━━━━━\n"
-            f"📥 <b>Канал-источник</b>\n"
+            "<b>📥 Канал-источник</b>\n"
             "└ Откуда копируются сообщения\n"
-            f"📤 <b>Канал-получатель</b>\n"
+            "<b>📤 Канал-получатель</b>\n"
             "└ Куда отправляются сообщения\n"
             "━━━━━━━━━━━━━━━━━━\n"
-            "⚙️ <b>УПРАВЛЕНИЕ АККАУНТОМ</b>\n"
+            "<b>⚙️ УПРАВЛЕНИЕ АККАУНТОМ</b>\n"
             "Выберите действие с помощью кнопок ниже 👇",
             reply_markup=account_menu(account_id),
             parse_mode="HTML",
         )
+        
     async def show_chat_page(self, callback: CallbackQuery, account_id: str, channel_type: ChatType, page: int):
         item = await self.storage.get_account(account_id)
         if not item:
@@ -134,11 +140,7 @@ class AccountHandlers:
             message = f"✅ Канал добавлен в список:\n {channel_name}"
         
         await self.storage.update_account(account_id, {key: selected_channels})
-        await callback.message.edit_text(
-            "🔘 Список аккаунтов:",
-            reply_markup=accounts_list_menu(await self.storage.get_accounts()),
-            parse_mode="HTML",
-        )
+        await self.show_account(callback, account_id)
         await callback.answer(message, show_alert=True)
         
 class LogInAccountHandlers:
